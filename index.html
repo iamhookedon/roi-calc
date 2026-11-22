@@ -254,7 +254,7 @@ button:focus-visible{outline:2px solid var(--co);outline-offset:2px}
       <textarea id="proc" class="t"></textarea>
       <div class="sub">인건비</div>
       <div class="row"><label for="burden">회사 부담률 (4대보험·퇴직)</label><div class="f"><input id="burden" inputmode="decimal"><span>%</span></div></div>
-      <div class="row"><label for="work">월 실근로시간</label><div class="f"><input id="work" inputmode="numeric"><span>시간</span></div></div>
+      <div class="row"><label for="work">1인 연간 근무시간</label><div class="f"><input id="work" inputmode="numeric"><span>시간</span></div></div>
       <div class="row"><label for="nprem">야간 가산율</label><div class="f"><input id="nprem" inputmode="decimal"><span>%</span></div></div>
       <div class="seg" role="group" aria-label="야간 가산율 빠른 선택"><button type="button" data-np="50">50%</button><button type="button" data-np="100">100%</button><button type="button" id="msepBtn">수작업 따로 설정</button></div>
       <div class="row" id="rowMnp"><label for="mnprem">수작업 야간 가산율</label><div class="f"><input id="mnprem" inputmode="decimal"><span>%</span></div></div>
@@ -262,7 +262,7 @@ button:focus-visible{outline:2px solid var(--co);outline-offset:2px}
       <div class="sub">수요</div>
       <div class="row"><label for="demand">연간 필요 생산량<br>(제품 개수)</label><div class="f"><input id="demand" inputmode="numeric"><span>개/년</span></div></div>
       <p class="help" id="demHelp"></p>
-      <p class="help">가동률·효율: 멈춤·휴식 시간을 뺀 실제 작업 비율 / 174시간: 실제 근로 (209시간은 주휴 포함)</p>
+      <p class="help">가동률·효율: 멈춤·휴식 시간을 뺀 실제 작업 비율 / 연 2,000시간: 하루 8시간 × 250일 (주말·공휴일 제외)</p>
     </details>
     <div class="tools"><button type="button" id="reset">예시 값으로</button><button type="button" id="copy2">요약 복사</button><span id="msg2" class="note" role="status"></span></div>
     <p class="note disc">이 결과는 입력값으로 계산한 <b>참고용 추정치</b>이며, 실제 회수 기간이나 절감액을 보장하지 않습니다. 투자 결정 전에는 현장 조건을 반영해 따로 검토하시기 바랍니다. 입력값은 이 기기에만 저장되고 어디로도 전송되지 않습니다.</p>
@@ -293,10 +293,10 @@ button:focus-visible{outline:2px solid var(--co);outline-offset:2px}
     <h3>기준과 출처</h3>
     <ul class="src">
       <li><b>최저시급 10,700원</b>: 2027년 적용, 고용노동부 고시. 월 환산 2,236,300원 (209시간)</li>
-      <li><b>209시간과 174시간</b>: 209시간은 주 40시간에 유급 주휴를 더한 월급 산정 기준, 174시간은 실제로 일하는 시간. 작업 1시간의 비용은 174시간으로 나눠 계산</li>
+      <li><b>209시간과 2,000시간</b>: 209시간은 주 40시간에 유급 주휴를 더한 월급 산정 기준. 실제로 일하는 시간은 연 약 2,000시간이므로, 작업 1시간의 비용은 연간 인건비 ÷ 2,000시간으로 계산</li>
       <li><b>야간 가산</b>: 22~06시 근로는 통상임금의 50% 가산 (근로기준법, 5인 이상 사업장). 연장근로와 겹치면 100%</li>
       <li><b>가동률·효율</b>: 고장·교체·휴식·준비로 멈추는 시간을 뺀 실제 작업 비율. 생산량을 구할 때는 곱하고, 필요한 근무시간을 구할 때는 나눔</li>
-      <li><b>1인 연간 근로시간</b>: 174시간 × 12개월 = 2,088시간</li>
+      <li><b>1인 연간 근무시간</b>: 하루 8시간 × 250일 = 2,000시간 (주말·공휴일을 뺀 관행값)</li>
       <li><b>가정값</b>: 회사 부담 20%, 수작업 효율 85%, 유지·전력비 장비가의 3%</li>
     </ul>
   </section>
@@ -315,9 +315,9 @@ button:focus-visible{outline:2px solid var(--co);outline-offset:2px}
 {
 const MW=10700,MH=209;
 const PRE={1:{hours:8,night:0},2:{hours:16,night:0},3:{hours:22,night:8}};
-const D={name:'예시 자동화 장비',price:300000000,aux:10000000,years:5,maint:3,hours:8,night:0,util:85,mode:'takt',takt:6,pph:600,days:250,ops:1,wmode:'min',mw:MW,pay:3000000,burden:20,work:174,nprem:50,proc:'부품 공급 → 조립 → 접합 → 절단 → 검수 → 포장',msec:45,meff:85,mequip:0,demand:0,msync:true,mhours:8,mnight:0,msep:false,mnprem:50};
+const D={name:'예시 자동화 장비',price:300000000,aux:10000000,years:5,maint:3,hours:8,night:0,util:85,mode:'takt',takt:6,pph:600,days:250,ops:1,wmode:'min',mw:MW,pay:3000000,burden:20,work:2000,nprem:50,proc:'부품 공급 → 조립 → 접합 → 절단 → 검수 → 포장',msec:45,meff:85,mequip:0,demand:0,msync:true,mhours:8,mnight:0,msep:false,mnprem:50};
 const NUM=['price','aux','years','maint','hours','night','util','takt','pph','days','ops','mw','pay','burden','work','nprem','msec','meff','mequip','demand','mhours','mnight','mnprem'];
-const BIG=['price','aux','pay','mw','mequip','demand','pph'];
+const BIG=['price','aux','pay','mw','mequip','demand','pph','work'];
 const $=id=>document.getElementById(id);
 const n=v=>isFinite(v)?Math.round(v).toLocaleString('ko-KR'):'–';
 const u=v=>!isFinite(v)?'–':(Math.abs(v)>=100?Math.round(v):Math.round(v*10)/10).toLocaleString('ko-KR');
@@ -327,13 +327,13 @@ const man=v=>!isFinite(v)?'–':v>=1e4?(Math.round(v/1e3)/10).toLocaleString('ko
 const yrs=v=>!isFinite(v)||v<0?'회수 불가':v===0?'즉시':v<1?Math.max(1,Math.round(v*12))+'개월':v.toFixed(1)+'년';
 const ppl=v=>!isFinite(v)?'–':(Math.round(v*10)/10).toFixed(1)+'명';
 let st={...D};
-try{const s=JSON.parse(localStorage.getItem('auto-roi')||'null');if(s)st={...D,...s}}catch(e){}
+try{const s=JSON.parse(localStorage.getItem('auto-roi')||'null');if(s){st={...D,...s};if(!(st.work>=500))st.work=D.work}}catch(e){}
 
 function calc(p,o={}){
   const q={...p,...o};
   const monthly=(q.wmode==='min'?q.mw*MH:q.pay)*(1+q.burden/100);
-  const hourly=q.work>0?monthly/q.work:0;
-  const yearH=q.work*12;
+  const hourly=q.work>0?monthly*12/q.work:0;
+  const yearH=q.work;
   const perHour=(q.mode==='takt'?(q.takt>0?3600/q.takt:0):q.pph)*(q.util/100);
   const daily=perHour*q.hours,cap=daily*q.days;
   const mc=q.demand>0&&cap>0?Math.max(1,Math.ceil(q.demand/cap)):1;
@@ -420,7 +420,7 @@ function render(){
   $('h-lo').textContent=ss[0]+'초';$('h-md').textContent=ss[1]+'초';$('h-hi').textContent=ss[2]+'초';
   $('sens').innerHTML=[1,2,3].map(k=>{const pr=PRE[k];return `<tr><td>${pr.hours}시간 (${k}교대)</td>${ss.map((sec,j)=>{const c=calc(st,{...pr,msec:sec});const on=j===1&&pr.hours===st.hours&&pr.night===st.night;return `<td class="num${on?' on':''}">${yrs(c.pay)}</td>`}).join('')}</tr>`}).join('');
   $('fx').innerHTML=[
-    `<b>시간당 인건비</b> ${n(r.hourly)}원 = 월 ${n(r.monthly)}원 ÷ ${st.work}시간`,
+    `<b>시간당 인건비</b> ${n(r.hourly)}원 = 월 ${n(r.monthly)}원 × 12 ÷ ${n(st.work)}시간`,
     `<b>장비 생산</b> 시간당 ${n(r.perHour)}개 × ${st.hours}시간 × ${st.days}일 = 연 ${man(r.cap)}개 (1대)`,
     `<b>수작업 인원</b> ${man(r.units)}개 × ${st.msec}초 ÷ 3,600 ÷ 효율 ${st.meff}% ÷ 1인 ${n(r.yearH)}시간 = ${(Math.round(r.fteM*10)/10)}명`,
     `<b>장비 운영 인원</b> ${st.ops}명 × 연 ${n(r.runH)}시간 ÷ ${n(r.yearH)}시간 = ${(Math.round(r.fteA*10)/10)}명`,
@@ -428,7 +428,7 @@ function render(){
     `<b>투자 회수</b> 투자금 ${eok2(r.net)} ÷ 연간 절감 ${eok2(r.save)} = ${yrs(r.pay)}`,
     `<b>개당 비용</b> 자동화 ${u(p.a)}원 (장비비 ${u(p.dep)} + 운영 ${u(p.alb)} + 유지 ${u(p.mt)}) / 수작업 ${u(p.m)}원`
   ].map(t=>`<li>${t}</li>`).join('');
-  $('wageHelp').innerHTML=`시간당 <b>${n(r.hourly)}원</b> (회사 부담 ${st.burden}% 포함, 실근로 ${st.work}시간 기준)`;
+  $('wageHelp').innerHTML=`시간당 <b>${n(r.hourly)}원</b> (회사 부담 ${st.burden}% 포함, 연 ${n(st.work)}시간 근무 기준)`;
   $('sum').textContent=r.save>0?`${name} ${r.mc}대(투자금 ${eok(r.net)})는 하루 ${st.hours}시간 가동 기준으로 작업자 약 ${ppl(r.fte)}의 업무를 대신해 연간 약 ${eok(r.save)}의 인건비를 줄이며, 약 ${yrs(r.pay)} 만에 투자금을 회수합니다. (입력값 기준 참고용 추정치)`:'현재 조건에서는 인건비 절감으로 투자금을 회수하기 어렵습니다.';
   document.querySelectorAll('[data-p]').forEach(b=>{const pr=PRE[b.dataset.p];b.setAttribute('aria-pressed',String(pr.hours===st.hours&&pr.night===st.night))});
   document.querySelectorAll('[data-m]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.m===st.mode)));
@@ -444,9 +444,9 @@ function render(){
   const stg=(t,c)=>`<div class="stage"><b>${t}</b><div class="cards">${c}</div></div>`;
   const prem=(sh,rate)=>sh>0?` × (1 + 야간 ${Math.round(sh*rate*10)/10}%)`:'';
   $('flow').innerHTML=[
-    stg('① 입력',C('i','장비 투자금',eok(r.invest),`가격 ${eok(st.price)} + 부대비용 ${eok(st.aux)}${r.mc>1?` × ${r.mc}대`:''}`)+C('i','장비 생산 속도',`시간당 ${n(r.perHour)}개`,st.mode==='takt'?`3,600초 ÷ ${st.takt}초 × 가동률 ${st.util}%`:`${n(st.pph)}개 × 가동률 ${st.util}%`)+C('i','수작업 1개당',`${st.msec}초`,`효율 ${st.meff}%`)+C('i','인건비',`시급 ${n(st.wmode==='min'?st.mw:st.pay/MH)}원`,`회사 부담 ${st.burden}%, 실근로 ${st.work}시간`)),
+    stg('① 입력',C('i','장비 투자금',eok(r.invest),`가격 ${eok(st.price)} + 부대비용 ${eok(st.aux)}${r.mc>1?` × ${r.mc}대`:''}`)+C('i','장비 생산 속도',`시간당 ${n(r.perHour)}개`,st.mode==='takt'?`3,600초 ÷ ${st.takt}초 × 가동률 ${st.util}%`:`${n(st.pph)}개 × 가동률 ${st.util}%`)+C('i','수작업 1개당',`${st.msec}초`,`효율 ${st.meff}%`)+C('i','인건비',`시급 ${n(st.wmode==='min'?st.mw:st.pay/MH)}원`,`회사 부담 ${st.burden}%, 연 ${n(st.work)}시간 근무`)),
     A,
-    stg('② 기준값',C('d','연간 생산량',`${man(r.units)}개`,st.demand>0?'입력한 필요 생산량':`시간당 ${n(r.perHour)}개 × ${st.hours}시간 × ${st.days}일`)+C('d','시간당 인건비',`${n(r.hourly)}원`,`월 ${n(r.monthly)}원 ÷ ${st.work}시간`)+C('d','1인 연간 근로시간',`${n(r.yearH)}시간`,`${st.work}시간 × 12개월`)),
+    stg('② 기준값',C('d','연간 생산량',`${man(r.units)}개`,st.demand>0?'입력한 필요 생산량':`시간당 ${n(r.perHour)}개 × ${st.hours}시간 × ${st.days}일`)+C('d','시간당 인건비',`${n(r.hourly)}원`,`월 ${n(r.monthly)}원 × 12 ÷ ${n(st.work)}시간`)+C('d','1인 연간 근무시간',`${n(r.yearH)}시간`,'하루 8시간 × 250일')),
     A,
     stg('③ 필요 인원',C('d','수작업',ppl(r.fteM),`${man(r.units)}개 × ${st.msec}초 ÷ 3,600 ÷ ${st.meff}% ÷ ${n(r.yearH)}시간`)+C('d','장비 운영',ppl(r.fteA),`${st.ops}명 × 연 ${n(r.runH)}시간 ÷ ${n(r.yearH)}시간`)+C('d','대체 인원',ppl(r.fte),'수작업 − 장비 운영')),
     A,

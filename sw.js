@@ -1,5 +1,5 @@
 // 계산기를 고친 뒤에는 아래 버전 숫자를 올려야 휴대폰에 새 버전이 반영됩니다.
-const CACHE = 'roi-calc-v1';
+const CACHE = 'roi-calc-v2';
 const FILES = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
