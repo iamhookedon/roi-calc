@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1240e0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="투자회수">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="description" content="자동화 장비가 대신하는 인원과 투자 회수 기간을 계산합니다.">
+<title>자동화 투자 회수 계산기</title>
+<style>
+/* VOICE work: a buyer-facing investment check; one answer first, proof on demand
+   IDEA a datasheet that opens on the verdict: people replaced, money saved, when it pays back
+   PICTURE two cumulative-cost lines (manual vs automation) crossing at the payback point; a row of worker figures above
+   COLOUR white ground, ink, cobalt #1240e0 automation, warm grey #8a7f72 manual, green #0a7a45 for the payback mark
+   TYPE system fonts only (no external connection); tabular numerals for figures
+   LAYOUT laptop: results left 58% (verdict, people, 3 numbers, chart), inputs right 42%; phone: results, inputs, sticky bar */
+:root{color-scheme:light dark;--bg:light-dark(#ffffff,#0a0d18);--ink:light-dark(#0b0f1c,#e8ebf5);--mute:light-dark(#545b6e,#9aa2b8);--line:light-dark(#d9deea,#262c40);--zone:light-dark(#eef2ff,#121831);--co:light-dark(#1240e0,#5b80ff);--co2:light-dark(#8ea6f5,#3554c4);--co3:light-dark(#c7d3fb,#24336e);--man:light-dark(#8a7f72,#b3a593);--man2:light-dark(#cfc6ba,#5f564c);--good:light-dark(#0a7a45,#4fd18f);--bad:light-dark(#b42318,#ff8a7a)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.55 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,system-ui,sans-serif;overflow-x:clip}
+.num{font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,sans-serif;font-variant-numeric:tabular-nums;white-space:nowrap}
+.strip{background:var(--co);color:#fff;padding:calc(18px + env(safe-area-inset-top,0px)) max(5vw,16px) 16px}
+.strip h1{margin:0;font-size:clamp(24px,3.4vw,34px);line-height:1.1;letter-spacing:-.02em}
+.strip p{margin:4px 0 0;opacity:.92;font-size:15px}
+main{max-width:1240px;margin:0 auto;padding:24px max(4vw,16px) 48px;display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:32px;align-items:start}
+.out{display:grid;gap:22px}
+.verdict{margin:0;font-size:clamp(22px,2.8vw,32px);line-height:1.25;letter-spacing:-.015em;text-wrap:balance}
+.verdict em{font-style:normal;color:var(--co);white-space:nowrap}
+.people{display:grid;gap:10px;background:var(--zone);border-radius:6px;padding:16px 18px}
+.prow{display:grid;grid-template-columns:5.5em minmax(0,1fr) auto;gap:10px;align-items:center}
+.prow>span:first-child{font-size:14px;color:var(--mute)}
+.figs{display:flex;flex-wrap:wrap;gap:3px;align-items:flex-end}
+.figs svg{width:22px;height:30px}
+.figs .mc{width:44px;height:30px}
+.figs b{font-size:14px;color:var(--mute);margin-left:4px;font-weight:500}
+.prow .num{font-size:18px;font-weight:600}
+.big3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:2px solid var(--ink);border-bottom:1px solid var(--line)}
+.big3 div{padding:14px 12px 14px 0}
+.big3 small{display:block;font-size:13px;color:var(--mute)}
+.big3 .num{display:block;font-size:clamp(28px,4vw,44px);font-weight:700;line-height:1.1;margin-top:2px}
+.big3 .g{color:var(--good)}
+.eq{margin:0;font-size:16px;line-height:1.6}
+.eq b{font-weight:600}
+.chartbox h2{margin:0 0 2px;font-size:17px}
+.chartbox p{margin:0;font-size:13px;color:var(--mute)}
+.fig{position:relative;height:280px;margin-top:8px}
+.fig>svg{position:absolute;inset:0;width:100%;height:100%}
+svg.ch text{font:13px -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,sans-serif;fill:var(--mute);paint-order:stroke;stroke:var(--bg);stroke-width:4px}
+.warn{margin:0;font-size:14px;color:var(--bad);font-weight:500}
+details.more{border-top:1px solid var(--line);padding-top:6px}
+details>summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;min-height:44px;font-weight:600}
+details>summary::-webkit-details-marker{display:none}
+details>summary::after{content:"＋";color:var(--mute);font-size:18px;font-weight:400}
+details[open]>summary::after{content:"－"}
+.mgrid{display:grid;gap:20px;padding:6px 0 10px}
+h3{margin:0 0 8px;font-size:15px}
+.bars{display:grid;gap:12px}
+.bar .lab{display:flex;justify-content:space-between;gap:10px;font-size:14px;margin-bottom:5px}
+.track{display:flex;height:24px;border-radius:3px;overflow:hidden;background:var(--zone)}
+.track div{height:100%;transition:width .35s ease}
+.leg{display:flex;flex-wrap:wrap;gap:12px;font-size:13px;color:var(--mute);margin-top:6px}
+.leg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.be{display:grid;grid-template-columns:repeat(auto-fit,minmax(13em,1fr));gap:10px}
+.be div{border:1px solid var(--line);border-radius:6px;padding:10px 12px}
+.be small{display:block;font-size:13px;color:var(--mute)}
+.be .num{font-size:20px;font-weight:600}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{font-weight:600;color:var(--mute);font-size:13px}
+td.on{background:var(--zone);font-weight:600}
+.fx{margin:0;padding-left:18px;font-size:13px;color:var(--mute);line-height:1.7}
+.fx b{color:var(--ink);font-weight:600}
+.sum{font-size:14px;line-height:1.7;border-left:3px solid var(--co);padding:4px 0 4px 12px;margin:0}
+.notes{font-size:13px;color:var(--mute);margin:0;padding-left:18px;line-height:1.6}
+.in{display:grid;gap:12px;position:sticky;top:16px}
+.panel{border:1px solid var(--line);border-radius:6px;padding:14px 16px}
+.panel>h2{margin:0 0 6px;font-size:15px}
+details.panel>summary h2{margin:0;font-size:15px}
+.row{display:grid;grid-template-columns:minmax(0,1fr) 10em;gap:10px;align-items:center;padding:4px 0}
+.row label{font-size:14px;color:var(--mute);word-break:keep-all}
+.f{display:flex;align-items:center;border:1px solid var(--line);border-radius:4px;background:var(--bg)}
+.f:focus-within{outline:2px solid var(--co);outline-offset:1px}
+.f input{width:100%;border:0;background:transparent;color:var(--ink);font:16px -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,sans-serif;padding:9px 4px 9px 10px;text-align:right;min-height:42px}
+.f input:focus{outline:none}
+.f input:disabled{color:var(--mute)}
+.f span{padding-right:10px;font-size:13px;color:var(--mute);white-space:nowrap}
+.t{width:100%;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--ink);font:16px -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,sans-serif;padding:9px 10px;min-height:42px}
+.t:focus{outline:2px solid var(--co);outline-offset:1px}
+textarea.t{resize:vertical;min-height:56px;line-height:1.5}
+.sub{font-size:13px;font-weight:600;margin:10px 0 2px;color:var(--ink)}
+.seg{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0}
+button{font:inherit;cursor:pointer}
+.seg button,.tools button{font-size:14px;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:4px;padding:7px 11px;min-height:40px}
+.seg button[aria-pressed=true]{background:var(--co);border-color:var(--co);color:#fff}
+button:focus-visible{outline:2px solid var(--co);outline-offset:2px}
+.help{font-size:13px;color:var(--mute);margin:2px 0 4px;line-height:1.5;word-break:keep-all}
+.help b{color:var(--ink);font-weight:600}
+.mini{font-size:13px;border:1px solid var(--line);background:var(--bg);color:var(--co);border-radius:4px;padding:4px 10px;min-height:32px;margin:2px 4px 0 0}
+.tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.note{font-size:13px;color:var(--mute);margin:0}
+.disc{margin-top:14px;padding-top:12px;border-top:1px solid var(--line);word-break:keep-all}
+.mbar{display:none}
+.tabs{display:flex;gap:6px;margin-top:12px}
+.tabs a{color:#fff;text-decoration:none;font-size:14px;border:1px solid rgba(255,255,255,.55);border-radius:4px;padding:7px 12px;min-height:38px;display:inline-flex;align-items:center}
+.tabs a[aria-current=page]{background:#fff;color:var(--co);border-color:#fff;font-weight:600}
+.logic{max-width:980px;margin:0 auto;padding:24px max(4vw,16px) 56px;display:grid;gap:28px}
+.logic h2{margin:0 0 4px;font-size:clamp(22px,2.6vw,28px);letter-spacing:-.01em}
+.logic h3{font-size:17px;margin:0 0 10px}
+.logic>section>p{margin:0;color:var(--mute);font-size:14px}
+.flow{display:grid;gap:0}
+.stage{display:grid;grid-template-columns:7.5em minmax(0,1fr);gap:12px;align-items:stretch}
+.stage>b{font-size:13px;color:var(--mute);padding-top:12px;word-break:keep-all}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(11em,1fr));gap:8px}
+.card{border:1px solid var(--line);border-left:4px solid var(--line);border-radius:5px;padding:9px 12px;background:var(--bg)}
+.card.i{border-left-color:var(--man2)}.card.d{border-left-color:var(--co2)}.card.r{border-left-color:var(--co)}.card.g{border-left-color:var(--good);background:var(--zone)}
+.card small{display:block;font-size:13px;color:var(--mute);word-break:keep-all}
+.card .num{font-size:18px;font-weight:600}
+.card .fm{display:block;font-size:13px;color:var(--mute);margin-top:2px;word-break:keep-all}
+.arrow{height:24px;display:flex;align-items:center;padding-left:calc(7.5em + 26px);color:var(--mute);font-size:18px}
+.keyrow{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:var(--mute)}
+.keyrow i{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.tbl td:nth-child(3),.tbl th:nth-child(3){color:var(--mute);white-space:normal;text-align:left}
+.src{margin:0;padding-left:18px;font-size:14px;line-height:1.7}
+.src b{font-weight:600}
+@media(max-width:600px){.stage{grid-template-columns:minmax(0,1fr);gap:4px}.stage>b{padding-top:6px}.arrow{padding-left:14px}}
+@media(max-width:900px){main{grid-template-columns:minmax(0,1fr);padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}.in{position:static}
+.mbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:5;gap:10px;align-items:center;justify-content:space-between;background:var(--co);color:#fff;padding:10px max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));box-shadow:0 -2px 10px rgba(0,0,0,.15)}
+.mbar div{display:grid;line-height:1.2}.mbar small{font-size:12px;opacity:.85}.mbar b{font:600 20px -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,sans-serif;white-space:nowrap}
+.mbar a{color:#fff;font-size:14px;border:1px solid rgba(255,255,255,.6);border-radius:4px;padding:8px 12px;text-decoration:none;white-space:nowrap}}
+@media(max-width:600px){.row{grid-template-columns:minmax(0,1fr) 9em}.prow{grid-template-columns:4.5em minmax(0,1fr) auto}.big3 div{padding-right:6px}table{font-size:13px}th,td{padding:6px 4px}}
+@media(prefers-reduced-motion:reduce){.track div{transition:none}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="p" viewBox="0 0 22 30"><circle cx="11" cy="6" r="5"/><path d="M2 30v-9a9 9 0 0 1 18 0v9z"/></symbol>
+  <symbol id="m" viewBox="0 0 44 30"><rect x="1" y="6" width="42" height="20" rx="3"/><rect x="6" y="11" width="12" height="8" rx="1" fill="var(--zone)"/><rect x="22" y="11" width="16" height="3" rx="1" fill="var(--zone)"/><rect x="22" y="16" width="10" height="3" rx="1" fill="var(--zone)"/><rect x="4" y="26" width="6" height="4"/><rect x="34" y="26" width="6" height="4"/></symbol>
+</svg>
+<header class="strip" id="top">
+  <h1>자동화 투자 회수 계산기</h1>
+  <p>장비가 대신하는 인원과 아끼는 인건비로, 투자금이 언제 회수되는지 보여 줍니다.</p>
+  <nav class="tabs" aria-label="화면 전환"><a href="#top" id="tabCalc">계산기</a><a href="#logic" id="tabLogic">계산 방법</a></nav>
+</header>
+<main id="calcView">
+  <section class="out" aria-live="polite">
+    <p class="note" id="vname" style="margin:0 0 -14px"></p>
+    <h2 class="verdict" id="verdict"></h2>
+    <div class="people" aria-label="필요 인원 비교">
+      <div class="prow"><span>수작업</span><div class="figs" id="figM"></div><span class="num" id="pM"></span></div>
+      <div class="prow"><span>자동화</span><div class="figs" id="figA"></div><span class="num" id="pA"></span></div>
+    </div>
+    <div class="big3">
+      <div><small>투자 회수</small><span class="num g" id="v-pay"></span></div>
+      <div><small>대체 인원</small><span class="num" id="v-fte"></span></div>
+      <div><small>연간 절감</small><span class="num" id="v-save"></span></div>
+    </div>
+    <p class="eq" id="eq"></p>
+    <p class="warn" id="warn" hidden></p>
+    <div class="chartbox">
+      <h2>누적 비용 비교</h2>
+      <p>장비는 처음에 투자금이 들지만 매년 비용이 적어, 두 선이 만나는 지점부터 이익입니다.</p>
+      <div class="fig"><svg class="ch" id="chart" role="img" aria-label="수작업과 자동화의 연도별 누적 비용"></svg></div>
+    </div>
+    <details class="more">
+      <summary>자세히 보기 (개당 비용 · 손익분기 · 조건별 비교 · 계산식)</summary>
+      <div class="mgrid">
+        <div>
+          <h3>제품 1개당 비용</h3>
+          <div class="bars">
+            <div class="bar"><div class="lab"><span>자동화</span><b class="num" id="b-a"></b></div><div class="track"><div id="s-dep" style="background:var(--co)"></div><div id="s-alb" style="background:var(--co2)"></div><div id="s-mt" style="background:var(--co3)"></div></div></div>
+            <div class="bar"><div class="lab"><span>수작업</span><b class="num" id="b-m"></b></div><div class="track"><div id="s-mlb" style="background:var(--man)"></div><div id="s-meq" style="background:var(--man2)"></div></div></div>
+          </div>
+          <div class="leg"><span><i style="background:var(--co)"></i>장비비</span><span><i style="background:var(--co2)"></i>운영 인건비</span><span><i style="background:var(--co3)"></i>유지비</span><span><i style="background:var(--man)"></i>수작업 인건비</span><span><i style="background:var(--man2)"></i>수작업 설비</span></div>
+        </div>
+        <div>
+          <h3>손익분기 (감가상각 기간 안에 회수되는 최소 조건)</h3>
+          <div class="be">
+            <div><small>수작업 1개당</small><span class="num" id="be-s"></span><small id="x-bes"></small></div>
+            <div><small>연간 수요</small><span class="num" id="be-u"></span><small id="x-beu"></small></div>
+          </div>
+        </div>
+        <div>
+          <h3>조건별 회수 기간</h3>
+          <div class="scroll"><table><thead><tr><th>장비 가동</th><th id="h-lo"></th><th id="h-md"></th><th id="h-hi"></th></tr></thead><tbody id="sens"></tbody></table></div>
+          <p class="note">열: 수작업 1개당 시간 (−30% / 입력값 / +30%)</p>
+        </div>
+        <div>
+          <h3>계산식</h3>
+          <ul class="fx" id="fx"></ul>
+        </div>
+        <div>
+          <h3>요약</h3>
+          <p class="sum" id="sum"></p>
+          <div class="tools" style="margin-top:8px"><button type="button" id="copy">요약 복사</button><span id="msg" class="note" role="status"></span></div>
+        </div>
+        <div><a href="#logic" style="color:var(--co);font-weight:600">계산 방법과 가정·출처 보기 →</a></div>
+      </div>
+    </details>
+  </section>
+
+  <section class="in" id="inputs" aria-label="입력값">
+    <div class="panel">
+      <h2>기본 입력</h2>
+      <div class="row"><label for="name">장비명</label><input id="name" class="t" type="text" autocomplete="off"></div>
+      <div class="row"><label for="price">장비 가격 (1대)</label><div class="f"><input id="price" inputmode="numeric"><span>원</span></div></div>
+      <div class="sub">장비 가동</div>
+      <div class="seg" role="group" aria-label="장비 가동 시간">
+        <button type="button" data-p="1">8시간 (1교대)</button><button type="button" data-p="2">16시간 (2교대)</button><button type="button" data-p="3">22시간 (3교대)</button>
+      </div>
+      <div class="sub">생산 속도</div>
+      <div class="seg" role="group" aria-label="생산 속도 입력 방식">
+        <button type="button" data-m="takt">택타임</button><button type="button" data-m="pph">시간당 개수</button>
+      </div>
+      <div class="row" id="rowTakt"><label for="takt">택타임</label><div class="f"><input id="takt" inputmode="decimal"><span>초/개</span></div></div>
+      <div class="row" id="rowPph"><label for="pph">시간당 생산량</label><div class="f"><input id="pph" inputmode="numeric"><span>개/시간</span></div></div>
+      <div class="row"><label for="msec">수작업 1개당 시간</label><div class="f"><input id="msec" inputmode="decimal"><span>초</span></div></div>
+      <div class="sub">인건비</div>
+      <div class="seg" role="group" aria-label="인건비 기준">
+        <button type="button" data-w="min">최저시급 기준</button><button type="button" data-w="pay">월급 직접 입력</button>
+      </div>
+      <div class="row" id="rowMw"><label for="mw">시급</label><div class="f"><input id="mw" inputmode="numeric"><span>원</span></div></div>
+      <div class="row" id="rowPay"><label for="pay">월 기본급 (1인)</label><div class="f"><input id="pay" inputmode="numeric"><span>원</span></div></div>
+      <p class="help" id="wageHelp"></p>
+    </div>
+    <details class="panel">
+      <summary><h2>세부 조건</h2></summary>
+      <div class="sub">장비</div>
+      <div class="row"><label for="aux">부대비용 (운송·설치·교육)</label><div class="f"><input id="aux" inputmode="numeric"><span>원</span></div></div>
+      <div class="row"><label for="years">감가상각 기간</label><div class="f"><input id="years" inputmode="decimal"><span>년</span></div></div>
+      <div class="row"><label for="maint">연간 유지·전력비<br>(장비가 대비)</label><div class="f"><input id="maint" inputmode="decimal"><span>%</span></div></div>
+      <div class="row"><label for="hours">1일 가동 시간</label><div class="f"><input id="hours" inputmode="decimal"><span>시간</span></div></div>
+      <div class="row"><label for="night">그중 야간 (22~06시)</label><div class="f"><input id="night" inputmode="decimal"><span>시간</span></div></div>
+      <div class="row"><label for="util">가동률</label><div class="f"><input id="util" inputmode="decimal"><span>%</span></div></div>
+      <div class="row"><label for="days">연간 가동일</label><div class="f"><input id="days" inputmode="numeric"><span>일</span></div></div>
+      <div class="row"><label for="ops">운영 인원 (교대당)</label><div class="f"><input id="ops" inputmode="decimal"><span>명</span></div></div>
+      <div class="sub">수작업</div>
+      <div class="seg" role="group" aria-label="수작업 근무 형태">
+        <button type="button" data-q="same">장비와 동일</button><button type="button" data-q="1">1교대</button><button type="button" data-q="2">2교대</button><button type="button" data-q="3">3교대</button>
+      </div>
+      <div class="row"><label for="mhours">1일 작업 시간</label><div class="f"><input id="mhours" inputmode="decimal"><span>시간</span></div></div>
+      <div class="row"><label for="mnight">그중 야간 (22~06시)</label><div class="f"><input id="mnight" inputmode="decimal"><span>시간</span></div></div>
+      <div class="row"><label for="meff">수작업 효율</label><div class="f"><input id="meff" inputmode="decimal"><span>%</span></div></div>
+      <div class="row"><label for="mequip">수작업 설비비 (총액)</label><div class="f"><input id="mequip" inputmode="numeric"><span>원</span></div></div>
+      <label for="proc" class="help" style="display:block;margin-top:6px">수작업 공정 <b id="procEx">(예시)</b></label>
+      <textarea id="proc" class="t"></textarea>
+      <div class="sub">인건비</div>
+      <div class="row"><label for="burden">회사 부담률 (4대보험·퇴직)</label><div class="f"><input id="burden" inputmode="decimal"><span>%</span></div></div>
+      <div class="row"><label for="work">월 실근로시간</label><div class="f"><input id="work" inputmode="numeric"><span>시간</span></div></div>
+      <div class="row"><label for="nprem">야간 가산율</label><div class="f"><input id="nprem" inputmode="decimal"><span>%</span></div></div>
+      <div class="seg" role="group" aria-label="야간 가산율 빠른 선택"><button type="button" data-np="50">50%</button><button type="button" data-np="100">100%</button><button type="button" id="msepBtn">수작업 따로 설정</button></div>
+      <div class="row" id="rowMnp"><label for="mnprem">수작업 야간 가산율</label><div class="f"><input id="mnprem" inputmode="decimal"><span>%</span></div></div>
+      <p class="help">야간(22~06시) 근로는 통상임금의 50% 가산 (5인 이상 사업장). 연장근로와 겹치면 100%. 기본은 장비·수작업 공통 적용</p>
+      <div class="sub">수요</div>
+      <div class="row"><label for="demand">연간 필요 생산량<br>(제품 개수)</label><div class="f"><input id="demand" inputmode="numeric"><span>개/년</span></div></div>
+      <p class="help" id="demHelp"></p>
+      <p class="help">가동률·효율: 멈춤·휴식 시간을 뺀 실제 작업 비율 / 174시간: 실제 근로 (209시간은 주휴 포함)</p>
+    </details>
+    <div class="tools"><button type="button" id="reset">예시 값으로</button><button type="button" id="copy2">요약 복사</button><span id="msg2" class="note" role="status"></span></div>
+    <p class="note disc">이 결과는 입력값으로 계산한 <b>참고용 추정치</b>이며, 실제 회수 기간이나 절감액을 보장하지 않습니다. 투자 결정 전에는 현장 조건을 반영해 따로 검토하시기 바랍니다. 입력값은 이 기기에만 저장되고 어디로도 전송되지 않습니다.</p>
+  </section>
+</main>
+<div class="logic" id="logicView" hidden>
+  <section>
+    <h2>계산 방법</h2>
+    <p>입력값이 어떤 순서로 회수 기간이 되는지 보여 줍니다. 숫자는 지금 계산기에 넣은 값입니다.</p>
+  </section>
+  <section>
+    <div class="keyrow" style="margin-bottom:12px"><span><i style="background:var(--man2)"></i>입력값</span><span><i style="background:var(--co2)"></i>중간 계산</span><span><i style="background:var(--co)"></i>연간 비용</span><span><i style="background:var(--good)"></i>결과</span></div>
+    <div class="flow" id="flow"></div>
+  </section>
+  <section>
+    <h3>회사 부담률 20%의 구성 (2026년 사업주 부담)</h3>
+    <div class="scroll"><table class="tbl"><thead><tr><th>항목</th><th>부담률</th><th>근거</th></tr></thead><tbody>
+      <tr><td>국민연금</td><td class="num">4.75%</td><td>총 9.5% 중 절반 (2027년부터 매년 0.25%p 상승)</td></tr>
+      <tr><td>건강보험</td><td class="num">3.595%</td><td>총 7.19% 중 절반</td></tr>
+      <tr><td>장기요양보험</td><td class="num">약 0.47%</td><td>건강보험료의 13.14%</td></tr>
+      <tr><td>고용보험</td><td class="num">약 1.15%</td><td>실업급여 0.9% + 고용안정·직능개발 0.25% (150인 미만)</td></tr>
+      <tr><td>산재보험</td><td class="num">약 1.47%</td><td>업종별로 다름, 평균 수준</td></tr>
+      <tr><td>퇴직충당금</td><td class="num">8.33%</td><td>1년에 한 달치 (1/12)</td></tr>
+      <tr><td><b>합계</b></td><td class="num"><b>약 19.8%</b></td><td>상여금·복리후생비 제외한 법정 최소 수준</td></tr>
+    </tbody></table></div>
+  </section>
+  <section>
+    <h3>기준과 출처</h3>
+    <ul class="src">
+      <li><b>최저시급 10,700원</b>: 2027년 적용, 고용노동부 고시. 월 환산 2,236,300원 (209시간)</li>
+      <li><b>209시간과 174시간</b>: 209시간은 주 40시간에 유급 주휴를 더한 월급 산정 기준, 174시간은 실제로 일하는 시간. 작업 1시간의 비용은 174시간으로 나눠 계산</li>
+      <li><b>야간 가산</b>: 22~06시 근로는 통상임금의 50% 가산 (근로기준법, 5인 이상 사업장). 연장근로와 겹치면 100%</li>
+      <li><b>가동률·효율</b>: 고장·교체·휴식·준비로 멈추는 시간을 뺀 실제 작업 비율. 생산량을 구할 때는 곱하고, 필요한 근무시간을 구할 때는 나눔</li>
+      <li><b>1인 연간 근로시간</b>: 174시간 × 12개월 = 2,088시간</li>
+      <li><b>가정값</b>: 회사 부담 20%, 수작업 효율 85%, 유지·전력비 장비가의 3%</li>
+    </ul>
+  </section>
+  <section>
+    <h3>반영하지 않은 항목</h3>
+    <ul class="src">
+      <li><b>불량·원자재 절감</b>: 반영하면 자동화 효과가 더 커짐</li>
+      <li><b>첫해 안정화 기간</b>: 반영하면 회수 기간이 다소 늘어남</li>
+      <li><b>금리·세금·인건비 상승률</b>: 정밀 투자 분석은 별도 검토</li>
+    </ul>
+    <p class="note" style="margin-top:10px">초기값은 예시입니다. 이 결과는 입력값으로 계산한 <b>참고용 추정치</b>이며, 실제 회수 기간이나 절감액을 보장하지 않습니다. 투자 결정 전에는 현장 조건을 반영해 따로 검토하시기 바랍니다. 입력값은 이 기기에만 저장되고 어디로도 전송되지 않습니다.</p>
+  </section>
+</div>
+<nav class="mbar" aria-label="결과 요약"><div><small>투자 회수</small><b id="m-pay"></b></div><div><small>대체 인원</small><b id="m-fte"></b></div><div><small>연간 절감</small><b id="m-save"></b></div><a href="#inputs">값 입력</a></nav>
+<script>
+{
+const MW=10700,MH=209;
+const PRE={1:{hours:8,night:0},2:{hours:16,night:0},3:{hours:22,night:8}};
+const D={name:'예시 자동화 장비',price:300000000,aux:10000000,years:5,maint:3,hours:8,night:0,util:85,mode:'takt',takt:6,pph:600,days:250,ops:1,wmode:'min',mw:MW,pay:3000000,burden:20,work:174,nprem:50,proc:'부품 공급 → 조립 → 접합 → 절단 → 검수 → 포장',msec:45,meff:85,mequip:0,demand:0,msync:true,mhours:8,mnight:0,msep:false,mnprem:50};
+const NUM=['price','aux','years','maint','hours','night','util','takt','pph','days','ops','mw','pay','burden','work','nprem','msec','meff','mequip','demand','mhours','mnight','mnprem'];
+const BIG=['price','aux','pay','mw','mequip','demand','pph'];
+const $=id=>document.getElementById(id);
+const n=v=>isFinite(v)?Math.round(v).toLocaleString('ko-KR'):'–';
+const u=v=>!isFinite(v)?'–':(Math.abs(v)>=100?Math.round(v):Math.round(v*10)/10).toLocaleString('ko-KR');
+const eok=v=>!isFinite(v)?'–':Math.abs(v)>=1e8?(v/1e8).toFixed(2)+'억 원':Math.round(v/1e4).toLocaleString('ko-KR')+'만 원';
+const eok2=v=>!isFinite(v)?'–':Math.abs(v)>=1e8?(v/1e8).toFixed(2)+'억 원':Math.round(v/1e4).toLocaleString('ko-KR')+'만 원';
+const man=v=>!isFinite(v)?'–':v>=1e4?(Math.round(v/1e3)/10).toLocaleString('ko-KR')+'만':n(v);
+const yrs=v=>!isFinite(v)||v<0?'회수 불가':v===0?'즉시':v<1?Math.max(1,Math.round(v*12))+'개월':v.toFixed(1)+'년';
+const ppl=v=>!isFinite(v)?'–':(Math.round(v*10)/10).toFixed(1)+'명';
+let st={...D};
+try{const s=JSON.parse(localStorage.getItem('auto-roi')||'null');if(s)st={...D,...s}}catch(e){}
+
+function calc(p,o={}){
+  const q={...p,...o};
+  const monthly=(q.wmode==='min'?q.mw*MH:q.pay)*(1+q.burden/100);
+  const hourly=q.work>0?monthly/q.work:0;
+  const yearH=q.work*12;
+  const perHour=(q.mode==='takt'?(q.takt>0?3600/q.takt:0):q.pph)*(q.util/100);
+  const daily=perHour*q.hours,cap=daily*q.days;
+  const mc=q.demand>0&&cap>0?Math.max(1,Math.ceil(q.demand/cap)):1;
+  const units=q.demand>0?q.demand:cap;
+  const invest=(q.price+q.aux)*mc;
+  const runH=perHour>0?units/perHour:Infinity;
+  const nShare=q.hours>0?Math.min(q.night,q.hours)/q.hours:0;
+  const aPrem=1+nShare*q.nprem/100;
+  const aLab=q.ops*hourly*runH*aPrem;
+  const mt=q.price*mc*q.maint/100;
+  const mHours=q.meff>0?units*q.msec/3600/(q.meff/100):Infinity;
+  const mh=q.msync?q.hours:q.mhours,mn=q.msync?q.night:q.mnight;
+  const mShare=mh>0?Math.min(mn,mh)/mh:0,mPrem=1+mShare*(q.msep?q.mnprem:q.nprem)/100;
+  const mLab=mHours*hourly*mPrem;
+  const save=mLab-aLab-mt,net=invest-q.mequip;
+  const pay=net<=0?0:save>0?net/save:Infinity;
+  const dep=q.years>0?invest/q.years:Infinity,mDep=q.years>0?q.mequip/q.years:0;
+  const pu={dep:dep/units,alb:aLab/units,mt:mt/units,mlb:mLab/units,meq:mDep/units};pu.a=pu.dep+pu.alb+pu.mt;pu.m=pu.mlb+pu.meq;
+  const fteM=mHours/yearH,fteA=q.ops*runH/yearH,fte=fteM-fteA;
+  const perManYear=hourly*yearH*mPrem;
+  const target=q.years>0?net/q.years+aLab+mt:Infinity;
+  const beSec=units>0&&hourly>0?target*3600*(q.meff/100)/(units*hourly*mPrem):Infinity;
+  const gainU=hourly*q.msec/3600/(q.meff/100)*mPrem-(perHour>0?q.ops*hourly*aPrem/perHour:Infinity);
+  const beU=gainU>0&&q.years>0?(net/q.years+mt)/gainU:Infinity;
+  return {monthly,hourly,yearH,perHour,daily,cap,mc,units,invest,runH,aLab,mt,mLab,save,net,pay,pu,fteM,fteA,fte,perManYear,beSec,beU,mShare,nShare};
+}
+
+function figs(el,count,kind,mc=1){
+  const c=Math.max(0,Math.round(count)),show=Math.min(c,20);
+  let h='';
+  if(kind==='a'){for(let i=0;i<Math.min(mc,6);i++)h+=`<svg class="mc" style="fill:var(--co)" aria-hidden="true"><use href="#m"/></svg>`;if(mc>6)h+=`<b>+${mc-6}대</b>`}
+  for(let i=0;i<show;i++)h+=`<svg style="fill:${kind==='a'?'var(--co2)':'var(--man)'}" aria-hidden="true"><use href="#p"/></svg>`;
+  if(c>show)h+=`<b>+${c-show}</b>`;
+  if(kind!=='a'&&c===0)h+=`<b>1명 미만</b>`;
+  el.innerHTML=h;
+}
+
+function chart(r){
+  const s=$('chart');const W=s.clientWidth,H=s.clientHeight;if(!W||!H)return;
+  const Y=Math.max(Math.ceil(st.years)||5,Math.min(10,isFinite(r.pay)?Math.ceil(r.pay)+1:5));
+  const manC=t=>st.mequip+r.mLab*t, autoC=t=>r.invest+(r.aLab+r.mt)*t;
+  const top=Math.max(manC(Y),autoC(Y),1);
+  const L=52,R=W<520?70:96,T=16,B=28;
+  const x=t=>L+t/Y*(W-L-R),y=v=>T+(1-v/top)*(H-T-B);
+  let g='';
+  const step=top>=1e9?5e8:top>=4e8?1e8:top>=1e8?5e7:1e7;
+  for(let v=0;v<=top;v+=step){if(top/step>6&&(v/step)%2)continue;g+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end">${v>=1e8?(v/1e8)+'억':v===0?'0':(v/1e4)+'만'}</text>`}
+  for(let t=0;t<=Y;t++){if(W<520&&t%2&&t!==Y)continue;g+=`<text x="${x(t)}" y="${H-8}" text-anchor="middle">${t===0?'도입':t+'년'}</text>`}
+  if(isFinite(r.pay)&&r.pay>0&&r.pay<Y){
+    const pts=[[r.pay,manC(r.pay)]];for(let t=Math.ceil(r.pay);t<=Y;t++)pts.push([t,manC(t)]);for(let t=Y;t>=Math.ceil(r.pay);t--)pts.push([t,autoC(t)]);
+    g+=`<polygon points="${pts.map(p=>x(p[0])+','+y(p[1])).join(' ')}" fill="var(--good)" opacity=".12"/>`;
+  }
+  g+=`<line x1="${x(0)}" y1="${y(manC(0))}" x2="${x(Y)}" y2="${y(manC(Y))}" stroke="var(--man)" stroke-width="3"/>`;
+  g+=`<line x1="${x(0)}" y1="${y(autoC(0))}" x2="${x(Y)}" y2="${y(autoC(Y))}" stroke="var(--co)" stroke-width="3"/>`;
+  let ym=y(manC(Y)),ya=y(autoC(Y));if(Math.abs(ym-ya)<34){const mid=(ym+ya)/2;ym=mid+(ym>=ya?17:-17);ya=mid+(ya>ym?17:-17)}
+  g+=`<text x="${x(Y)+8}" y="${ym}" style="fill:var(--man);font-weight:600">수작업</text><text x="${x(Y)+8}" y="${ym+15}">${eok(manC(Y))}</text>`;
+  g+=`<text x="${x(Y)+8}" y="${ya}" style="fill:var(--co);font-weight:600">자동화</text><text x="${x(Y)+8}" y="${ya+15}">${eok(autoC(Y))}</text>`;
+  if(isFinite(r.pay)&&r.pay>0&&r.pay<=Y){const px=x(r.pay),py=y(autoC(r.pay));g+=`<circle cx="${px}" cy="${py}" r="6" fill="var(--good)" stroke="var(--bg)" stroke-width="2"/><text x="${px}" y="${py-14}" text-anchor="middle" style="fill:var(--good);font-weight:700;font-size:14px">회수 ${yrs(r.pay)}</text>`}
+  s.innerHTML=g;
+}
+
+function route(){const lg=location.hash==='#logic';$('logicView').hidden=!lg;$('calcView').hidden=lg;$('tabLogic').setAttribute('aria-current',lg?'page':'false');$('tabCalc').setAttribute('aria-current',lg?'false':'page');document.querySelector('.mbar').style.visibility=lg?'hidden':'';if(lg)window.scrollTo(0,0)}
+function render(){
+  const r=calc(st);const name=st.name.trim()||'자동화 장비';
+  $('vname').textContent=`${name} ${r.mc}대 · 하루 ${st.hours}시간 가동 · 수작업 1개 ${st.msec}초 기준`;
+  $('verdict').innerHTML=r.save>0?`작업자 <em>약 ${ppl(r.fte)}</em>을 대신해, <em>${yrs(r.pay)}</em> 만에 투자금을 회수합니다`:`이 조건에서는 인건비 절감으로 투자금을 회수하기 어렵습니다`;
+  figs($('figM'),r.fteM,'m');figs($('figA'),r.fteA,'a',r.mc);
+  $('pM').textContent=ppl(r.fteM);$('pA').textContent=`장비 ${r.mc}대 + ${ppl(r.fteA)}`;
+  $('v-pay').textContent=yrs(r.pay);$('v-fte').textContent=ppl(r.fte);$('v-save').textContent=eok(r.save);
+  $('m-pay').textContent=yrs(r.pay);$('m-fte').textContent=ppl(r.fte);$('m-save').textContent=eok(r.save);
+  const yrsOfWage=r.fte>0&&r.perManYear>0?r.net/(r.fte*r.perManYear):Infinity;
+  $('eq').innerHTML=r.save>0?`수작업은 매년 <b>${eok(r.mLab)}</b>, 자동화는 매년 <b>${eok(r.aLab+r.mt)}</b>이 듭니다. 차이인 <b>${eok(r.save)}</b>으로 투자금 ${eok(r.net)}을 회수하고, 그 뒤로는 매년 ${eok(r.save)}씩 남습니다.`:'';
+  const w=[];
+  if(st.demand>0&&r.mc>1)w.push(`수요가 1대 능력(연 ${man(r.cap)}개)을 넘어 ${r.mc}대로 계산했습니다.`);
+  if(!(r.perHour>0))w.push('생산 속도를 입력하세요.');
+  if(!(st.years>0))w.push('감가상각 기간을 입력하세요.');
+  $('warn').hidden=!w.length;$('warn').textContent=w.join(' ');
+  const p=r.pu,mx=Math.max(p.a,p.m)||1,pc=v=>(isFinite(v)?Math.max(0,v/mx*100):0)+'%';
+  $('s-dep').style.width=pc(p.dep);$('s-alb').style.width=pc(p.alb);$('s-mt').style.width=pc(p.mt);$('s-mlb').style.width=pc(p.mlb);$('s-meq').style.width=pc(p.meq);
+  $('b-a').textContent=u(p.a)+'원';$('b-m').textContent=u(p.m)+'원';
+  $('be-s').textContent=isFinite(r.beSec)?u(r.beSec)+'초 이상':'–';$('x-bes').textContent=`현재 ${st.msec}초 · ${r.beSec<=st.msec?'충족':'미충족'}`;
+  $('be-u').textContent=isFinite(r.beU)?man(r.beU)+'개 이상':'달성 불가';$('x-beu').textContent=isFinite(r.beU)?`현재 ${man(r.units)}개 · ${r.beU<=r.units?'충족':'미충족'}`:'';
+  const ss=[.7,1,1.3].map(k=>Math.round(st.msec*k*10)/10);
+  $('h-lo').textContent=ss[0]+'초';$('h-md').textContent=ss[1]+'초';$('h-hi').textContent=ss[2]+'초';
+  $('sens').innerHTML=[1,2,3].map(k=>{const pr=PRE[k];return `<tr><td>${pr.hours}시간 (${k}교대)</td>${ss.map((sec,j)=>{const c=calc(st,{...pr,msec:sec});const on=j===1&&pr.hours===st.hours&&pr.night===st.night;return `<td class="num${on?' on':''}">${yrs(c.pay)}</td>`}).join('')}</tr>`}).join('');
+  $('fx').innerHTML=[
+    `<b>시간당 인건비</b> ${n(r.hourly)}원 = 월 ${n(r.monthly)}원 ÷ ${st.work}시간`,
+    `<b>장비 생산</b> 시간당 ${n(r.perHour)}개 × ${st.hours}시간 × ${st.days}일 = 연 ${man(r.cap)}개 (1대)`,
+    `<b>수작업 인원</b> ${man(r.units)}개 × ${st.msec}초 ÷ 3,600 ÷ 효율 ${st.meff}% ÷ 1인 ${n(r.yearH)}시간 = ${(Math.round(r.fteM*10)/10)}명`,
+    `<b>장비 운영 인원</b> ${st.ops}명 × 연 ${n(r.runH)}시간 ÷ ${n(r.yearH)}시간 = ${(Math.round(r.fteA*10)/10)}명`,
+    `<b>연간 절감</b> 수작업 인건비 ${eok2(r.mLab)} − 운영 인건비 ${eok2(r.aLab)} − 유지비 ${eok2(r.mt)} = ${eok2(r.save)}`,
+    `<b>투자 회수</b> 투자금 ${eok2(r.net)} ÷ 연간 절감 ${eok2(r.save)} = ${yrs(r.pay)}`,
+    `<b>개당 비용</b> 자동화 ${u(p.a)}원 (장비비 ${u(p.dep)} + 운영 ${u(p.alb)} + 유지 ${u(p.mt)}) / 수작업 ${u(p.m)}원`
+  ].map(t=>`<li>${t}</li>`).join('');
+  $('wageHelp').innerHTML=`시간당 <b>${n(r.hourly)}원</b> (회사 부담 ${st.burden}% 포함, 실근로 ${st.work}시간 기준)`;
+  $('sum').textContent=r.save>0?`${name} ${r.mc}대(투자금 ${eok(r.net)})는 하루 ${st.hours}시간 가동 기준으로 작업자 약 ${ppl(r.fte)}의 업무를 대신해 연간 약 ${eok(r.save)}의 인건비를 줄이며, 약 ${yrs(r.pay)} 만에 투자금을 회수합니다. (입력값 기준 참고용 추정치)`:'현재 조건에서는 인건비 절감으로 투자금을 회수하기 어렵습니다.';
+  document.querySelectorAll('[data-p]').forEach(b=>{const pr=PRE[b.dataset.p];b.setAttribute('aria-pressed',String(pr.hours===st.hours&&pr.night===st.night))});
+  document.querySelectorAll('[data-m]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.m===st.mode)));
+  document.querySelectorAll('[data-w]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.w===st.wmode)));
+  document.querySelectorAll('[data-q]').forEach(b=>{const v=b.dataset.q;b.setAttribute('aria-pressed',String(v==='same'?st.msync:(!st.msync&&PRE[v].hours===st.mhours&&PRE[v].night===st.mnight)))});
+  if(st.msync){$('mhours').value=st.hours;$('mnight').value=st.night}
+  $('mhours').disabled=st.msync;$('mnight').disabled=st.msync;
+  $('rowMnp').hidden=!st.msep;$('msepBtn').setAttribute('aria-pressed',String(st.msep));
+  document.querySelectorAll('[data-np]').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.np===st.nprem)));
+  $('rowTakt').hidden=st.mode!=='takt';$('rowPph').hidden=st.mode!=='pph';$('rowMw').hidden=st.wmode!=='min';$('rowPay').hidden=st.wmode!=='pay';
+  const C=(k,t,v,f)=>`<div class="card ${k}"><small>${t}</small><span class="num">${v}</span>${f?`<span class="fm">${f}</span>`:''}</div>`;
+  const A='<div class="arrow" aria-hidden="true">↓</div>';
+  const stg=(t,c)=>`<div class="stage"><b>${t}</b><div class="cards">${c}</div></div>`;
+  const prem=(sh,rate)=>sh>0?` × (1 + 야간 ${Math.round(sh*rate*10)/10}%)`:'';
+  $('flow').innerHTML=[
+    stg('① 입력',C('i','장비 투자금',eok(r.invest),`가격 ${eok(st.price)} + 부대비용 ${eok(st.aux)}${r.mc>1?` × ${r.mc}대`:''}`)+C('i','장비 생산 속도',`시간당 ${n(r.perHour)}개`,st.mode==='takt'?`3,600초 ÷ ${st.takt}초 × 가동률 ${st.util}%`:`${n(st.pph)}개 × 가동률 ${st.util}%`)+C('i','수작업 1개당',`${st.msec}초`,`효율 ${st.meff}%`)+C('i','인건비',`시급 ${n(st.wmode==='min'?st.mw:st.pay/MH)}원`,`회사 부담 ${st.burden}%, 실근로 ${st.work}시간`)),
+    A,
+    stg('② 기준값',C('d','연간 생산량',`${man(r.units)}개`,st.demand>0?'입력한 필요 생산량':`시간당 ${n(r.perHour)}개 × ${st.hours}시간 × ${st.days}일`)+C('d','시간당 인건비',`${n(r.hourly)}원`,`월 ${n(r.monthly)}원 ÷ ${st.work}시간`)+C('d','1인 연간 근로시간',`${n(r.yearH)}시간`,`${st.work}시간 × 12개월`)),
+    A,
+    stg('③ 필요 인원',C('d','수작업',ppl(r.fteM),`${man(r.units)}개 × ${st.msec}초 ÷ 3,600 ÷ ${st.meff}% ÷ ${n(r.yearH)}시간`)+C('d','장비 운영',ppl(r.fteA),`${st.ops}명 × 연 ${n(r.runH)}시간 ÷ ${n(r.yearH)}시간`)+C('d','대체 인원',ppl(r.fte),'수작업 − 장비 운영')),
+    A,
+    stg('④ 연간 비용',C('r','수작업',eok(r.mLab),`필요 근무시간 ${n(r.fteM*r.yearH)}시간 × ${n(r.hourly)}원${prem(r.mShare,st.msep?st.mnprem:st.nprem)}`)+C('r','자동화',eok(r.aLab+r.mt),`운영 인건비 ${eok(r.aLab)} + 유지·전력비 ${eok(r.mt)}`)),
+    A,
+    stg('⑤ 결과',C('g','연간 절감',eok(r.save),'수작업 연간 비용 − 자동화 연간 비용')+C('g','투자 회수',yrs(r.pay),`투자금 ${eok(r.net)} ÷ 연간 절감 ${eok(r.save)}`))
+  ].join('');
+  $('demHelp').innerHTML=st.demand>0?(st.demand<r.cap*0.05?`<b style="color:var(--bad)">연 ${man(st.demand)}개는 장비 1대 능력(연 ${man(r.cap)}개)에 비해 매우 적어 회수가 어렵습니다.</b> 0을 넣으면 1대 능력만큼 생산하는 것으로 계산합니다.`:`1대 능력은 연 ${man(r.cap)}개입니다. → <b>필요 장비 ${r.mc}대</b>${r.mc>1?` (연 ${man(r.cap*r.mc)}개까지 생산 가능)`:''}`):`0 = 장비 1대가 1년에 만드는 만큼(<b>연 ${man(r.cap)}개</b>) 생산한다고 보고 계산합니다. 연간 개수를 넣으면 필요한 장비 대수를 자동으로 계산합니다.`;
+  chart(r);
+  try{localStorage.setItem('auto-roi',JSON.stringify(st))}catch(e){}
+}
+const fmt=k=>BIG.includes(k)?Number(st[k]).toLocaleString('ko-KR'):String(st[k]);
+const parse=t=>{const v=parseFloat(String(t).replace(/[^0-9.]/g,''));return isFinite(v)?v:0};
+function fill(){NUM.forEach(k=>$(k).value=fmt(k));$('name').value=st.name;$('proc').value=st.proc;$('procEx').hidden=st.proc!==D.proc}
+NUM.forEach(k=>{const el=$(k);el.addEventListener('input',()=>{st[k]=parse(el.value);if(k==='mhours'||k==='mnight')st.msync=false;render()});el.addEventListener('blur',()=>{el.value=fmt(k)})});
+$('name').addEventListener('input',e=>{st.name=e.target.value;render()});
+$('proc').addEventListener('input',e=>{st.proc=e.target.value;$('procEx').hidden=st.proc!==D.proc;try{localStorage.setItem('auto-roi',JSON.stringify(st))}catch(x){}});
+document.querySelectorAll('[data-p]').forEach(b=>b.addEventListener('click',()=>{Object.assign(st,PRE[b.dataset.p]);$('hours').value=st.hours;$('night').value=st.night;render()}));
+document.querySelectorAll('[data-m]').forEach(b=>b.addEventListener('click',()=>{st.mode=b.dataset.m;render()}));
+document.querySelectorAll('[data-w]').forEach(b=>b.addEventListener('click',()=>{st.wmode=b.dataset.w;render()}));
+document.querySelectorAll('[data-q]').forEach(b=>b.addEventListener('click',()=>{const v=b.dataset.q;if(v==='same')st.msync=true;else{st.msync=false;st.mhours=PRE[v].hours;st.mnight=PRE[v].night;$('mhours').value=st.mhours;$('mnight').value=st.mnight}render()}));
+document.querySelectorAll('[data-np]').forEach(b=>b.addEventListener('click',()=>{st.nprem=+b.dataset.np;$('nprem').value=st.nprem;if(!st.msep){st.mnprem=st.nprem;$('mnprem').value=st.mnprem}render()}));
+$('msepBtn').addEventListener('click',()=>{st.msep=!st.msep;if(st.msep){st.mnprem=st.nprem;$('mnprem').value=st.mnprem}render()});
+$('reset').addEventListener('click',()=>{st={...D};fill();render()});
+const doCopy=async(m)=>{try{await navigator.clipboard.writeText($('sum').textContent);$(m).textContent='복사했습니다.'}catch(e){$(m).textContent='복사가 막혀 있습니다. 직접 선택해 복사하세요.'}};
+$('copy2').addEventListener('click',()=>doCopy('msg2'));
+$('copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('sum').textContent);$('msg').textContent='복사했습니다.'}catch(e){$('msg').textContent='복사가 막혀 있습니다. 직접 선택해 복사하세요.'}});
+const ro=new ResizeObserver(()=>chart(calc(st)));ro.observe($('chart'));
+window.addEventListener('hashchange',route);
+fill();render();route();
+}
+</script>
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));</script>
+</body>
+</html>
